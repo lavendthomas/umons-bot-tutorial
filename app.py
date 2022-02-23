@@ -44,18 +44,32 @@ def pr_watch_title(repo, payload):
             )   
 
 
-def pr_watch_comment_status(repo, payload):
+def issue_created_event(repo, payload):
     comment: str = payload["comment"]["body"]
+    print(f"Comment: {comment}")
 
-    pr = repo.get_issue(number=payload['pull_request']['number'])
-    commit_sha = repo.get_git_ref(f'heads/{payload["pull_request"]["head"]["ref"]}').object.sha
+    # Check if the issue was created in a pull request
+    if "pull_request" in payload["issue"].keys():
+        # Get the pull request and set the sucess satus
+        pr = repo.get_issue(number=payload['issue']['number']).as_pull_request() # Every pull request is also an issue
+        # get the latest commit in the PR
 
-    if index := comment.find("@umons-bot-tutorial") > 0:
-        rest_of_comment = comment[index+len("@umons-bot-tutorial"):]
-        print(f"Rest of comment: {rest_of_comment}")
-        if "ready for review" in rest_of_comment.lower():
-            # Add a label to the pull request
-            pass # WIP
+        lastest_commit_sha = pr.get_commits().get_page(0)[0].commit.sha
+
+        print(lastest_commit_sha)
+
+        # Look is the comment is a `ready for review` command for the bot
+        if index := comment.find("@umons-bot-tutorial") >= 0:
+            rest_of_comment = comment[index+len("@umons-bot-tutorial"):]
+            print(f"Rest of comment: {rest_of_comment}")
+            if "ready for review" in rest_of_comment.lower():
+                # Add a success status to the pull request
+                print("Adding a success status to the pull request")
+                repo.get_commit(sha=lastest_commit_sha).create_status(
+                    state='success',
+                    context="umons-bot/WIP"
+                )
+
 
             
 
@@ -120,8 +134,8 @@ def bot():
     if all(k in payload.keys() for k in ['action', 'pull_request']) and payload['action'] == 'edited':
         pr_edited_event(repo, payload)
 
-    if all(k in payload.keys() for k in ['action', 'issue_comment']) and payload['action'] == 'created':
-        pr_watch_comment_status(repo, payload)
+    if all(k in payload.keys() for k in ['action', 'issue', 'comment']) and payload['action'] == 'created':
+        issue_created_event(repo, payload)
 
     return "", 204
 
