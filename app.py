@@ -36,7 +36,7 @@ def pr_watch_title(repo, payload):
 
     else:
         # Check if the pull request has a label called "pending"
-        if not any(label.name == 'pending' for label in pr.labels): # TODO change commit.get_statuses().state == "pending"
+        if repo.get_commit(sha=commit_sha).get_statuses(context="umons-bot/WIP").get_page(0)[0].state == "pending": # TODO try
             # Set the status to "success"
             repo.get_commit(sha=commit_sha).create_status(
                 state='success',
@@ -45,6 +45,10 @@ def pr_watch_title(repo, payload):
 
 
 def issue_created_event(repo, payload):
+    """
+    Note: This implementation is not complete. It does not handle the case where a contributor
+    adds a WIP in the title AFTER a comment with `@umons-bot-tutorial ready for review`
+    """
     comment: str = payload["comment"]["body"]
     print(f"Comment: {comment}")
 
